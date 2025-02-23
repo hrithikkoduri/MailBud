@@ -1,0 +1,11 @@
+{
+    "dockerfile_lines": [],
+    "graphs": {
+      "email_agent": "./app/email_agent.py:email_agent"
+    },
+    "env": "./.env",
+    "python_version": "3.12",
+    "dependencies": [
+      "."
+    ]
+  }
