@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
+.venv
+env/
+venv/
+ENV/
+credentials.json
+token.json
+email_agent.ipynb
+test.ipynb
+__pycache__
