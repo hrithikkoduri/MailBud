@@ -144,7 +144,7 @@ async def fetch_meetings():
     thread_id = str(uuid.uuid4())
     config = {"configurable": {"thread_id": thread_id}}
     
-    input_message = ["Check Email Threads to schedule meetings"]
+    input_message = ["Waiting for google account authentication to access Gmail and Calendar..."]
     
     return StreamingResponse(
         stream_events_generator(input_message, config),

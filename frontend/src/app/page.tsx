@@ -343,97 +343,102 @@ export default function Home() {
                       </div>
                     )}
                     {meetingsData && meetingsData.newMeetings.length > 0 && (
-                      <div className="mt-8 flex justify-center">
-                        <button
-                          onClick={async () => {
-                            if (selectedEvents.size === 0) {
-                              alert('Please select at least one meeting to schedule');
-                              return;
-                            }
-                            
-                            let newResolution = resolutionInput;
-                            
-                            // Add input field content for each selected event
-                            meetingsData?.newMeetings.forEach(meeting => {
-                              const input = displayInput.get(meeting.summary);
-                              if (input?.trim()) {
-                                const meetingDetails = `
-                                  Summary: ${meeting.summary}
-                                  Time: ${formatDateTime(meeting.start.dateTime)} - ${formatDateTime(meeting.end.dateTime)}
-                                  Location: ${meeting.location || 'No location specified'}
-                                  Attendees: ${meeting.attendees.map(a => a.email).join(', ')}
-                                `;
-                                const inputString = `\n---------------------------------\n\nFor New Meeting:\n${meetingDetails}\n${input}\n---------------------------------\n`;
-                                newResolution += inputString;
+                      <div className="mt-8 space-y-4">
+                        <div className="text-sm text-slate-600 bg-red-50/50 border border-red-200/50 rounded-xl p-4 text-center shadow-xl">
+                          <span className="font-medium text-red-700">Important:</span> Even after applying your suggested changes, if the new meeting times still overlap with existing calendar events, those existing events will be automatically removed to accommodate the new meetings. Please review carefully before proceeding.
+                        </div>
+                        <div className="flex justify-center">
+                          <button
+                            onClick={async () => {
+                              if (selectedEvents.size === 0) {
+                                alert('Please select at least one meeting to schedule');
+                                return;
                               }
-                            });
-                            
-                            setResolutionInput(newResolution);
-                            
-                            try {
-                              setLoading(true);
-                              const response = await fetch(`http://localhost:8000/api/schedule-meetings/${threadId}`, {
-                                method: 'POST',
-                                headers: {
-                                  'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify({
-                                  resolution: newResolution
-                                })
+                              
+                              let newResolution = resolutionInput;
+                              
+                              // Add input field content for each selected event
+                              meetingsData?.newMeetings.forEach(meeting => {
+                                const input = displayInput.get(meeting.summary);
+                                if (input?.trim()) {
+                                  const meetingDetails = `
+                                    Summary: ${meeting.summary}
+                                    Time: ${formatDateTime(meeting.start.dateTime)} - ${formatDateTime(meeting.end.dateTime)}
+                                    Location: ${meeting.location || 'No location specified'}
+                                    Attendees: ${meeting.attendees.map(a => a.email).join(', ')}
+                                  `;
+                                  const inputString = `\n---------------------------------\n\nFor New Meeting:\n${meetingDetails}\n${input}\n---------------------------------\n`;
+                                  newResolution += inputString;
+                                }
                               });
+                              
+                              setResolutionInput(newResolution);
+                              
+                              try {
+                                setLoading(true);
+                                const response = await fetch(`http://localhost:8000/api/schedule-meetings/${threadId}`, {
+                                  method: 'POST',
+                                  headers: {
+                                    'Content-Type': 'application/json',
+                                  },
+                                  body: JSON.stringify({
+                                    resolution: newResolution
+                                  })
+                                });
 
-                              const reader = response.body?.getReader();
-                              if (!reader) return;
+                                const reader = response.body?.getReader();
+                                if (!reader) return;
 
-                              while (true) {
-                                const { done, value } = await reader.read();
-                                if (done) break;
+                                while (true) {
+                                  const { done, value } = await reader.read();
+                                  if (done) break;
 
-                                const chunk = new TextDecoder().decode(value);
-                                const events = chunk.split('\n\n').filter(Boolean);
+                                  const chunk = new TextDecoder().decode(value);
+                                  const events = chunk.split('\n\n').filter(Boolean);
 
-                                for (const event of events) {
-                                  const data: StreamResponse = JSON.parse(event);
-                                  
-                                  switch (data.type) {
-                                    case 'message':
-                                      handleStreamMessage(data.content);
-                                      await new Promise(resolve => setTimeout(resolve, 2000));
-                                      break;
-                                    case 'resolution_output':
-                                      setResolutionOutput(data.content);
-                                      break;
-                                    case 'meetings_scheduled':
-                                      setScheduledMeetings(data.data.meetings);
-                                      break;
+                                  for (const event of events) {
+                                    const data: StreamResponse = JSON.parse(event);
+                                    
+                                    switch (data.type) {
+                                      case 'message':
+                                        handleStreamMessage(data.content);
+                                        await new Promise(resolve => setTimeout(resolve, 2000));
+                                        break;
+                                      case 'resolution_output':
+                                        setResolutionOutput(data.content);
+                                        break;
+                                      case 'meetings_scheduled':
+                                        setScheduledMeetings(data.data.meetings);
+                                        break;
+                                    }
                                   }
                                 }
+                              } catch (error) {
+                                console.error('Error scheduling meetings:', error);
+                              } finally {
+                                setLoading(false);
+                                setDisplayInput(new Map());
                               }
-                            } catch (error) {
-                              console.error('Error scheduling meetings:', error);
-                            } finally {
-                              setLoading(false);
-                              setDisplayInput(new Map());
-                            }
-                          }}
-                          disabled={selectedEvents.size === 0}
-                          className={`px-8 py-4 bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 text-white rounded-xl 
-                            hover:from-blue-600 hover:via-blue-700 hover:to-blue-800 transition-all duration-300 
-                            shadow-lg shadow-blue-500/20 hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-0.5
-                            font-medium text-lg ${selectedEvents.size === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        >
-                          {loading ? (
-                            <span className="flex items-center justify-center space-x-2">
-                              <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                              </svg>
-                              <span>{currentMessage || 'Scheduling...'}</span>
-                            </span>
-                          ) : (
-                            `Schedule Meeting${selectedEvents.size !== 1 ? 's' : ''}`
-                          )}
-                        </button>
+                            }}
+                            disabled={loading || selectedEvents.size === 0}
+                            className={`px-8 py-4 bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 text-white rounded-xl 
+                              hover:from-blue-600 hover:via-blue-700 hover:to-blue-800 transition-all duration-300 
+                              shadow-lg shadow-blue-500/20 hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-0.5
+                              font-medium text-lg ${(loading || selectedEvents.size === 0) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          >
+                            {loading ? (
+                              <span className="flex items-center justify-center space-x-2">
+                                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <span>{currentMessage || 'Scheduling...'}</span>
+                              </span>
+                            ) : (
+                              `Schedule Meeting${selectedEvents.size !== 1 ? 's' : ''}`
+                            )}
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>

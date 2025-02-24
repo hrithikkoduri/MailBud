@@ -496,7 +496,7 @@ async def fetch_conflicting_events_for_meeting(state: AgentState):
     if bool_conflicting_events == False:
         return {"conflicting_events" : "NONE", "messages" : ["No conflicting events found. Will collect any updates for the events before scheduling them..."], "events_to_be_scheduled" : state["events_to_be_scheduled"]}
     else:
-        return {"conflicting_events" : conflicting_events, "messages" : ["Found conflicting events, need to resolve them..."], "events_to_be_scheduled" : state["events_to_be_scheduled"]}
+        return {"conflicting_events" : conflicting_events, "messages" : ["Found conflicting events, resolving them..."], "events_to_be_scheduled" : state["events_to_be_scheduled"]}
 
 
 
@@ -516,6 +516,10 @@ async def resolve_conflicting_events(state: AgentState):
         - Users Input regarding the resolution of the conflicts
 
         Based on the users input, you need to resolve the conflicts and return the events to be scheduled.
+
+        ### Important:
+        - For your context in user input , even after the changes specified in the user input, if the new meeting times still overlap with existing calendar events, those existing events will be automatically removed to accommodate the new meetings. 
+        - The user is aware about this. So keep this in mind when you need to handle such scenarios and when you provide your output, the resoltuion description provided by you will be made available to the user, to inform them how the conflicts were resolved.
 
         ### Output:
         - The output of the resolved events to be scheduled. It should be in the same format as the events_to_be_scheduled.
