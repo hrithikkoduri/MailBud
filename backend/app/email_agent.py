@@ -14,14 +14,10 @@ from operator import add
 from langgraph.graph import MessagesState
 from langchain_core.messages import HumanMessage, SystemMessage
 import json
-from dateutil.parser import parse
-from datetime import datetime
+from datetime import datetime, timezone
 from langgraph.graph import START, END, StateGraph
-import sqlite3
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 import aiosqlite
-import aiohttp
-from google.auth.transport.requests import AuthorizedSession
 import asyncio
 from functools import partial
 
@@ -48,6 +44,7 @@ llm_o3_mini = ChatOpenAI(model="o3-mini", reasoning_effort="high")
 
 llm_anthropic = ChatAnthropic(model="claude-3-5-sonnet-20240620", temperature=0)
 llm = llm_4o
+
 
 
 
@@ -271,7 +268,6 @@ async def get_threads_with_messages(state: AgentState):
         return {f"An error occurred: {error}"}
 
 
-
 async def extract_meeting_details(state: AgentState):
 
     system_message = """
@@ -313,6 +309,11 @@ async def extract_meeting_details(state: AgentState):
     6. **Attendee Emails**:
     - Carefully extract attendee emails without any typos or errors,in the format:
        ["email1@example.com",  "email12@example.com"]
+    
+    ### Very Important:
+    - Use the current date and time provided in the input to determine if the meeting is in the past or future.
+    - If the meeting is in the past, DO NOT return it in the output.
+    - If the meeting is in the future, return the meeting details.
 
     Ensure accuracy and completeness in extracting the details.
     """
@@ -325,23 +326,30 @@ async def extract_meeting_details(state: AgentState):
     """
     threads_with_messages = state["threads_with_messages"]
     threads_with_messages = threads_with_messages.threads
-    current_date_time = datetime.now().isoformat()
+    current_date_time = datetime.now(timezone.utc).isoformat()
 
     human_message = human_prompt.format(threads_with_messages=threads_with_messages, current_date_time=current_date_time)
     messages = [SystemMessage(content=system_message), HumanMessage(content=human_message)]
 
-    meeting_details = llm_anthropic.with_structured_output(MeetingDetailsList).invoke(messages)
+    meeting_details = llm.with_structured_output(MeetingDetailsList).invoke(messages)
 
     if meeting_details == "NONE":
         return {"messages" : ["No meeting details found in the email threads."]}
     else:
         return {"meeting_details" : meeting_details, "messages" : ["Extracted meeting details from the email threads, creating meeting events to be scheduled..."]}
 
-    
+
+class CheckFutureMeetings(BaseModel):
+    future_meetings: Literal["NO_FUTURE_MEETINGS"] | Literal["FUTURE_MEETINGS_FOUND"]
+
+
 async def after_extract_meeting_details_router(state:AgentState):
     meeting_details = state["meeting_details"]
 
-    if meeting_details == "NONE":
+    meetings = meeting_details.meetings
+    
+
+    if meeting_details == "NONE" or meetings == "NONE":
         return "no_meeting_details"
     else:
         return "events_to_schedule"
@@ -419,7 +427,7 @@ async def ensure_rfc3339(timestamp_str, timezone):
     """
     human_prompt = human_prompt.format(timestamp_str=timestamp_str, timezone=timezone)
     messages = [SystemMessage(content=system_message), HumanMessage(content=human_prompt)]
-    response = llm_anthropic.invoke(messages)
+    response = llm.invoke(messages)
     return response.content
 
 
@@ -538,7 +546,7 @@ async def resolve_conflicting_events(state: AgentState):
         human_message = human_prompt.format(conflicting_events=conflicting_events, meeting_details=meeting_details, user_input=resolution_input)
 
         messages = [SystemMessage(content=system_message), HumanMessage(content=human_message)]
-        resolution = llm_anthropic.with_structured_output(Resolution).invoke(messages)
+        resolution = llm.with_structured_output(Resolution).invoke(messages)
         resolved_events = resolution.resolved_events
         resolution_description = resolution.resolution_description
         formatted_resolved_events = await format_meeting_details(resolved_events)
