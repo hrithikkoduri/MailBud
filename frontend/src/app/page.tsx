@@ -17,6 +17,7 @@ export default function Home() {
   const [replaceConflicting, setReplaceConflicting] = useState<Set<string>>(new Set());
   const [displayInput, setDisplayInput] = useState<Map<string, string>>(new Map());
   const [scheduledMeetings, setScheduledMeetings] = useState<ScheduledMeeting[] | null>(null);
+  const [resolutionOutput, setResolutionOutput] = useState<string | null>(null);
 
   const handleStreamMessage = (message: string) => {
     setCurrentMessage(message);
@@ -85,8 +86,14 @@ export default function Home() {
               handleStreamMessage(data.content);
               await new Promise(resolve => setTimeout(resolve, 2000));
               break;
+            case 'resolution_output':
+              setResolutionOutput(data.content);
+              break;
             case 'final':
               handleFinalResponse(data.data);
+              break;
+            case 'meetings_scheduled':
+              setScheduledMeetings(data.data.meetings);
               break;
           }
         }
@@ -393,6 +400,9 @@ export default function Home() {
                                       handleStreamMessage(data.content);
                                       await new Promise(resolve => setTimeout(resolve, 2000));
                                       break;
+                                    case 'resolution_output':
+                                      setResolutionOutput(data.content);
+                                      break;
                                     case 'meetings_scheduled':
                                       setScheduledMeetings(data.data.meetings);
                                       break;
@@ -456,6 +466,37 @@ export default function Home() {
                     </div>
                   ))}
                 </div>
+                
+                {resolutionOutput && (
+                  <div className="bg-gradient-to-br from-slate-50 to-white rounded-2xl p-8 border border-slate-200/60 shadow-lg">
+                    <h3 className="text-xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 mb-6">
+                      Resolution Details
+                    </h3>
+                    <div className="space-y-6 text-slate-600 leading-relaxed">
+                      {resolutionOutput.split('\n\n').map((paragraph, index) => {
+                        // Check if paragraph is a numbered point
+                        if (paragraph.match(/^\d+\./)) {
+                          return (
+                            <div key={index} className="space-y-4">
+                              <h4 className="text-lg font-medium text-slate-800">
+                                {paragraph.split('\n')[0]}
+                              </h4>
+                              <p className="pl-6 text-slate-600">
+                                {paragraph.split('\n').slice(1).join('\n')}
+                              </p>
+                            </div>
+                          );
+                        }
+                        return (
+                          <p key={index} className={`${index === 0 ? 'text-lg font-medium text-slate-700' : 'text-slate-600'}`}>
+                            {paragraph}
+                          </p>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 <div className="pt-4">
                   <button
                     onClick={() => {
@@ -468,6 +509,7 @@ export default function Home() {
                       setSelectAll(false);
                       setReplaceConflicting(new Set());
                       setDisplayInput(new Map());
+                      setResolutionOutput(null); // Reset resolution output
                       fetchMeetings();
                     }}
                     disabled={loading}
@@ -483,7 +525,7 @@ export default function Home() {
                         </svg>
                         <span>{currentMessage || 'Processing...'}</span>
                       </span>
-                    ) : 'Fetch Meetings'}
+                    ) : 'Fetch Meetings Again'}
                   </button>
                 </div>
               </div>

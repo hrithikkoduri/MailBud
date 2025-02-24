@@ -104,6 +104,13 @@ async def schedule_events_generator(config):
                     "type": "message",
                     "content": formatted_message
                 }, indent=2) + "\n\n"
+
+            if "resolution_output" in event:
+                resolution_output = event["resolution_output"]
+                yield json.dumps({
+                    "type": "resolution_output",
+                    "content": resolution_output
+                }, indent=2) + "\n\n"
             
             if "meetings_scheduled" in event:
                 yield json.dumps({

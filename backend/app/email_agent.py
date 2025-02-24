@@ -154,7 +154,7 @@ class ConflictingEvents(TypedDict):
 
 class Resolution(BaseModel):
     resolved_events: MeetingDetailsList
-    resolution_description: str = Field(description="A description of the conflicting events were resolved based on the users input")
+    resolution_description: str = Field(description="A description of how users input was used to resolve the conflicting events or make updates to the events")
 
 class AgentState(MessagesState):
     threads_with_messages: Threads
@@ -163,6 +163,7 @@ class AgentState(MessagesState):
     events_to_be_scheduled: List[Dict]
     conflicting_events: List[ConflictingEvents]
     resolution_input: HumanMessage
+    resolution_output: str
     
 gmail_service = []
 calendar_service = []
@@ -517,7 +518,8 @@ async def resolve_conflicting_events(state: AgentState):
         Based on the users input, you need to resolve the conflicts and return the events to be scheduled.
 
         ### Output:
-        The output of the resolved events to be scheduled. It should be in the same format as the events_to_be_scheduled.
+        - The output of the resolved events to be scheduled. It should be in the same format as the events_to_be_scheduled.
+        - A description of how users input was used to resolve the conflicting events or make updates to the events.
         """
         human_prompt = """
         This is the list of conflicting events:
@@ -541,7 +543,7 @@ async def resolve_conflicting_events(state: AgentState):
         resolution_description = resolution.resolution_description
         formatted_resolved_events = await format_meeting_details(resolved_events)
         
-        return {"events_to_be_scheduled" : formatted_resolved_events, "messages" : [resolution_description]}
+        return {"events_to_be_scheduled" : formatted_resolved_events, "resolution_output" : resolution_description}
 
     
 
