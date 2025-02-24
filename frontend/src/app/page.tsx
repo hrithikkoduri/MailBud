@@ -14,6 +14,8 @@ export default function Home() {
   const [resolutionInput, setResolutionInput] = useState<string>('');
   const [selectedEvents, setSelectedEvents] = useState<Set<string>>(new Set());
   const [selectAll, setSelectAll] = useState(false);
+  const [replaceConflicting, setReplaceConflicting] = useState<Set<string>>(new Set());
+  const [displayInput, setDisplayInput] = useState<Map<string, string>>(new Map());
 
   const handleStreamMessage = (message: string) => {
     setCurrentMessage(message);
@@ -156,8 +158,14 @@ export default function Home() {
                             setSelectAll(e.target.checked);
                             if (e.target.checked) {
                               setSelectedEvents(new Set(meetingsData.newMeetings.map(m => m.summary)));
+                              const newResolution = resolutionInput + "\n---------------------------------\n\nSchedule all events\n\n---------------------------------\n";
+                              setResolutionInput(newResolution);
+                              console.log("Resolution input updated:", newResolution);
                             } else {
                               setSelectedEvents(new Set());
+                              const newResolution = resolutionInput.replace("\n---------------------------------\n\nSchedule all events\n\n---------------------------------\n", "");
+                              setResolutionInput(newResolution);
+                              console.log("Resolution input updated:", newResolution);
                             }
                           }}
                           className="h-5 w-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
@@ -187,11 +195,25 @@ export default function Home() {
                                     checked={selectedEvents.has(meeting.summary)}
                                     onChange={(e) => {
                                       const newSelected = new Set(selectedEvents);
+                                      const meetingDetails = `
+                                        Summary: ${meeting.summary}
+                                        Time: ${formatDateTime(meeting.start.dateTime)} - ${formatDateTime(meeting.end.dateTime)}
+                                        Location: ${meeting.location || 'No location specified'}
+                                        Attendees: ${meeting.attendees.map(a => a.email).join(', ')}
+                                      `;
+                                      const scheduleString = `\n---------------------------------\n\nSchedule the new meeting:\n${meetingDetails}\n\n---------------------------------\n`;
+
                                       if (e.target.checked) {
                                         newSelected.add(meeting.summary);
+                                        const newResolution = resolutionInput + scheduleString;
+                                        setResolutionInput(newResolution);
+                                        console.log("Resolution input updated:", newResolution);
                                       } else {
                                         newSelected.delete(meeting.summary);
                                         setSelectAll(false);
+                                        const newResolution = resolutionInput.replace(scheduleString, '');
+                                        setResolutionInput(newResolution);
+                                        console.log("Resolution input updated:", newResolution);
                                       }
                                       setSelectedEvents(newSelected);
                                     }}
@@ -238,23 +260,69 @@ export default function Home() {
                             <div className="flex items-center gap-4 w-full">
                               {relatedConflicts?.existing_events.length > 0 ? (
                                 <>
-                                  <button
-                                    onClick={() => handleResolution(resolutionInput)}
-                                    className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl hover:from-purple-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 whitespace-nowrap"
-                                  >
-                                    Replace Conflicting Events
-                                  </button>
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="checkbox"
+                                      checked={replaceConflicting.has(meeting.summary)}
+                                      onChange={(e) => {
+                                        const newReplaceConflicting = new Set(replaceConflicting);
+                                        const newMeetingDetails = `
+                                          Summary: ${meeting.summary}
+                                          Time: ${formatDateTime(meeting.start.dateTime)} - ${formatDateTime(meeting.end.dateTime)}
+                                          Location: ${meeting.location || 'No location specified'}
+                                          Attendees: ${meeting.attendees.map(a => a.email).join(', ')}
+                                        `;
+
+                                        const conflictingEventsDetails = relatedConflicts.existing_events.map(event => `
+                                          Summary: ${event.summary}
+                                          Time: ${formatDateTime(event.start.dateTime)} - ${formatDateTime(event.end.dateTime)}
+                                          Location: ${event.location || 'No location specified'}
+                                          Attendees: ${event.attendees.map(a => a.email).join(', ')}
+                                        `).join('\n');
+
+                                        const resolutionString = `\n---------------------------------\n\nResolve Conflicting Events for the New meeting:\n${newMeetingDetails}\nBy replacing the conflicting events:\n${conflictingEventsDetails}\nwith the new meeting.\n\n---------------------------------\n`;
+
+                                        if (e.target.checked) {
+                                          newReplaceConflicting.add(meeting.summary);
+                                          const newResolution = resolutionInput + resolutionString;
+                                          setResolutionInput(newResolution);
+                                          setDisplayInput(new Map()); // Clear display input
+                                          console.log("Resolution input updated:", newResolution);
+                                        } else {
+                                          newReplaceConflicting.delete(meeting.summary);
+                                          // Remove the specific resolution string when unchecked
+                                          const newResolution = resolutionInput.replace(resolutionString, '');
+                                          setResolutionInput(newResolution);
+                                          setDisplayInput(new Map()); // Clear display input
+                                          console.log("Resolution input updated:", newResolution);
+                                        }
+                                        setReplaceConflicting(newReplaceConflicting);
+                                      }}
+                                      className="h-5 w-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                                    />
+                                    <label className="text-sm font-medium text-slate-600">
+                                      Replace Conflicting Events
+                                    </label>
+                                  </div>
                                   <span className="text-slate-400 font-medium">or</span>
                                 </>
                               ) : null}
                               <input
                                 type="text"
-                                value={resolutionInput}
-                                onChange={(e) => setResolutionInput(e.target.value)}
+                                value={displayInput.get(meeting.summary) || ''}
+                                onChange={(e) => {
+                                  if (!replaceConflicting.has(meeting.summary)) {
+                                    const newDisplayInput = new Map(displayInput);
+                                    newDisplayInput.set(meeting.summary, e.target.value);
+                                    setDisplayInput(newDisplayInput);
+                                    console.log("Display input updated for", meeting.summary, ":", e.target.value);
+                                  }
+                                }}
+                                disabled={replaceConflicting.has(meeting.summary)}
                                 placeholder={relatedConflicts?.existing_events.length > 0
                                   ? "Enter your custom resolution suggestion to resolve meeting conflicts..."
                                   : "Enter any changes to be made to the event..."}
-                                className="flex-1 px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-slate-600"
+                                className="flex-1 px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-slate-600 disabled:bg-slate-100 disabled:text-slate-400"
                               />
                             </div>
                           </div>
@@ -271,8 +339,30 @@ export default function Home() {
                           alert('Please select at least one meeting to schedule');
                           return;
                         }
-                        // TODO: Implement scheduling logic
-                        console.log('Scheduling selected events:', Array.from(selectedEvents));
+                        
+                        let newResolution = resolutionInput;
+                        
+                        // Add input field content for each selected event
+                        meetingsData?.newMeetings.forEach(meeting => {
+                          const input = displayInput.get(meeting.summary);
+                          if (input?.trim()) {
+                            const meetingDetails = `
+                              Summary: ${meeting.summary}
+                              Time: ${formatDateTime(meeting.start.dateTime)} - ${formatDateTime(meeting.end.dateTime)}
+                              Location: ${meeting.location || 'No location specified'}
+                              Attendees: ${meeting.attendees.map(a => a.email).join(', ')}
+                            `;
+                            const inputString = `\n---------------------------------\n\nFor New Meeting:\n${meetingDetails}\n${input}\n---------------------------------\n`;
+                            newResolution += inputString;
+                          }
+                        });
+                        
+                        // Set the final resolution input in one update
+                        setResolutionInput(newResolution);
+                        
+                        // Clear all display inputs after submission
+                        setDisplayInput(new Map());
+                        console.log('Final resolution text:', newResolution);
                       }}
                       className="px-8 py-4 bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 text-white rounded-xl 
                         hover:from-blue-600 hover:via-blue-700 hover:to-blue-800 transition-all duration-300 
