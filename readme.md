@@ -26,8 +26,6 @@
 ## Overview
 MailBud is an intelligent AI assistant that streamlines email management and meeting scheduling. It automatically scans your Gmail inbox, identifies meeting requests, and handles calendar scheduling while managing conflicts - all through an intuitive interface.
 
-## Overview
-MailBud is an intelligent AI assistant that streamlines email management and meeting scheduling. It automatically scans your Gmail inbox, identifies meeting requests, and handles calendar scheduling while managing conflicts - all through an intuitive interface.
 
 ## Key Features
 
@@ -62,7 +60,7 @@ MailBud is an intelligent AI assistant that streamlines email management and mee
 ### Backend Setup
 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/mailbud.git
+git clone https://github.com/hrithikkoduri/MailBud.git
 cd mailbud
 cd backend
 ```
