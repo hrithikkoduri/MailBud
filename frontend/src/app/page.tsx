@@ -265,6 +265,7 @@ export default function Home() {
                                       type="checkbox"
                                       checked={replaceConflicting.has(meeting.summary)}
                                       onChange={(e) => {
+                                        if (!selectedEvents.has(meeting.summary)) return;
                                         const newReplaceConflicting = new Set(replaceConflicting);
                                         const newMeetingDetails = `
                                           Summary: ${meeting.summary}
@@ -298,7 +299,8 @@ export default function Home() {
                                         }
                                         setReplaceConflicting(newReplaceConflicting);
                                       }}
-                                      className="h-5 w-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                                      disabled={!selectedEvents.has(meeting.summary)}
+                                      className="h-5 w-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500 disabled:opacity-50"
                                     />
                                     <label className="text-sm font-medium text-slate-600">
                                       Replace Conflicting Events
@@ -311,14 +313,13 @@ export default function Home() {
                                 type="text"
                                 value={displayInput.get(meeting.summary) || ''}
                                 onChange={(e) => {
-                                  if (!replaceConflicting.has(meeting.summary)) {
-                                    const newDisplayInput = new Map(displayInput);
-                                    newDisplayInput.set(meeting.summary, e.target.value);
-                                    setDisplayInput(newDisplayInput);
-                                    console.log("Display input updated for", meeting.summary, ":", e.target.value);
-                                  }
+                                  if (!selectedEvents.has(meeting.summary) || replaceConflicting.has(meeting.summary)) return;
+                                  const newDisplayInput = new Map(displayInput);
+                                  newDisplayInput.set(meeting.summary, e.target.value);
+                                  setDisplayInput(newDisplayInput);
+                                  console.log("Display input updated for", meeting.summary, ":", e.target.value);
                                 }}
-                                disabled={replaceConflicting.has(meeting.summary)}
+                                disabled={!selectedEvents.has(meeting.summary) || replaceConflicting.has(meeting.summary)}
                                 placeholder={relatedConflicts?.existing_events.length > 0
                                   ? "Enter your custom resolution suggestion to resolve meeting conflicts..."
                                   : "Enter any changes to be made to the event..."}
