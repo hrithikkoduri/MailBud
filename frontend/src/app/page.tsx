@@ -1,17 +1,37 @@
 'use client';
 
 import { useState } from 'react';
-import { StreamResponse } from '@/types/api';
-import { StreamMessage } from '@/components/StreamMessage';
+import { StreamResponse, FinalResponse } from '@/types/api';
+import { MeetingsData } from '@/types/meetings';
+import { format } from 'date-fns';
 
 export default function Home() {
   const [currentMessage, setCurrentMessage] = useState<string | null>(null);
   const [threadId, setThreadId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [streamingComplete, setStreamingComplete] = useState(false);
+  const [meetingsData, setMeetingsData] = useState<MeetingsData | null>(null);
 
   const handleStreamMessage = (message: string) => {
     setCurrentMessage(message);
+  };
+
+  const formatDateTime = (dateTime: string) => {
+    return format(new Date(dateTime), 'MMM d, yyyy h:mm a');
+  };
+
+  const handleFinalResponse = (data: FinalResponse['data']) => {
+    if (data.conflicting_events === "NONE") {
+      setMeetingsData({
+        newMeetings: data.events_to_be_scheduled?.meetings || [],
+        conflictingEvents: []
+      });
+    } else {
+      setMeetingsData({
+        newMeetings: data.conflicting_events.map(ce => ce.new_event),
+        conflictingEvents: data.conflicting_events
+      });
+    }
   };
 
   const fetchMeetings = async () => {
@@ -46,6 +66,9 @@ export default function Home() {
             case 'message':
               handleStreamMessage(data.content);
               await new Promise(resolve => setTimeout(resolve, 2000));
+              break;
+            case 'final':
+              handleFinalResponse(data.data);
               break;
           }
         }
@@ -100,10 +123,65 @@ export default function Home() {
                 ) : 'Fetch Meetings'}
               </button>
             ) : (
-              <div className="text-center animate-fadeIn">
-                <h2 className="text-lg  bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600">
-                  Found following meetings to be scheduled from email threads:
-                </h2>
+              <div className="space-y-6">
+                <div className="text-center animate-fadeIn">
+                  <h2 className="text-lg bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600">
+                    Found following meetings to be scheduled from email threads:
+                  </h2>
+                </div>
+
+                {meetingsData && (
+                  <div className="space-y-6">
+                    {meetingsData.newMeetings.map((meeting, index) => {
+                      const relatedConflicts = meetingsData.conflictingEvents?.find(
+                        conflict => conflict.new_event.summary.toLowerCase() === meeting.summary.toLowerCase()
+                      );
+
+                      return (
+                        <div key={index} className="bg-white/90 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-white/20">
+                          <div className="space-y-4">
+                            <div>
+                              <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">New Meeting</h3>
+                              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 shadow-md border border-white/20">
+                                <h4 className="font-medium text-slate-800">{meeting.summary}</h4>
+                                <div className="mt-2 space-y-1 text-sm text-slate-600">
+                                  <p>📅 {formatDateTime(meeting.start.dateTime)} - {formatDateTime(meeting.end.dateTime)}</p>
+                                  <p>📍 {meeting.location || 'No location specified'}</p>
+                                  <p>👥 {meeting.attendees.map(a => a.email).join(', ')}</p>
+                                </div>
+                              </div>
+                            </div>
+
+                            {relatedConflicts && (
+                              <div>
+                                <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">
+                                  Conflicting Events ({relatedConflicts.existing_events.length})
+                                </h3>
+                                <div className="space-y-4">
+                                  {relatedConflicts.existing_events.map((existingEvent, eventIndex) => (
+                                    <div 
+                                      key={eventIndex} 
+                                      className="bg-rose-50/80 backdrop-blur-sm rounded-xl p-4 shadow-md border border-rose-100"
+                                    >
+                                      <h4 className="font-medium text-slate-800">
+                                        Existing: {existingEvent.summary}
+                                      </h4>
+                                      <div className="mt-2 space-y-1 text-sm text-slate-600">
+                                        <p>📅 {formatDateTime(existingEvent.start.dateTime)} - {formatDateTime(existingEvent.end.dateTime)}</p>
+                                        <p>📍 {existingEvent.location || 'No location specified'}</p>
+                                        <p>👥 {existingEvent.attendees.map(a => a.email).join(', ')}</p>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </div>
