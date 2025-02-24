@@ -172,7 +172,7 @@ async def complete_auth(state: AgentState):
     auth = ServiceAuthenticator()
     gmail_service = await auth.get_gmail_service()
     calendar_service = await auth.get_calendar_service()
-    return {"messages": ["Google account authenticated with Gmail and Calendar"]}
+    return {"messages": ["Google account authenticated to access Gmail and Calendar, Fetching email threads from Gmail inbox..."]}
 
 
 
@@ -271,7 +271,7 @@ async def get_threads_with_messages(state: AgentState):
                     Thread(thread_id=thread_id, subject=subject, messages=messages)
                 )
 
-        return {"threads_with_messages": threads_with_messages, "messages" : ["Email threads with messages retrieved"]}
+        return {"threads_with_messages": threads_with_messages, "messages" : ["Email threads with messages retrieved, extracting meeting details..."]}
     
     except HttpError as error:
         return {f"An error occurred: {error}"}
@@ -338,8 +338,10 @@ async def extract_meeting_details(state: AgentState):
 
     meeting_details = llm_anthropic.with_structured_output(MeetingDetailsList).invoke(messages)
 
-
-    return {"meeting_details" : meeting_details, "messages" : ["Extracted meeting details if any from the email threads"]}
+    if meeting_details == "NONE":
+        return {"messages" : ["No meeting details found in the email threads."]}
+    else:
+        return {"meeting_details" : meeting_details, "messages" : ["Extracted meeting details from the email threads, creating meeting events to be scheduled..."]}
 
     
 async def after_extract_meeting_details_router(state:AgentState):
@@ -397,7 +399,7 @@ async def events_to_schedule(state: AgentState):
     print(formatted_meeting_details)
     print("--------------------------------")
 
-    return {"events_to_be_scheduled" : formatted_meeting_details, "messages" : ["Events to schedule created"]}
+    return {"events_to_be_scheduled" : formatted_meeting_details, "messages" : ["Created meeting events to be scheduled, fetching conflicting events..."]}
 
 
 
@@ -491,21 +493,15 @@ async def fetch_conflicting_events_for_meeting(state: AgentState):
     
     
     if bool_conflicting_events == False:
-        return {"conflicting_events" : "NONE", "messages" : ["No conflicting events found"], "events_to_be_scheduled" : state["events_to_be_scheduled"]}
+        return {"conflicting_events" : "NONE", "messages" : ["No conflicting events found. Will collect any updates for the events before scheduling them..."], "events_to_be_scheduled" : state["events_to_be_scheduled"]}
     else:
-        return {"conflicting_events" : conflicting_events, "messages" : ["Conflicting events fetched"], "events_to_be_scheduled" : state["events_to_be_scheduled"]}
+        return {"conflicting_events" : conflicting_events, "messages" : ["Found conflicting events, need to resolve them..."], "events_to_be_scheduled" : state["events_to_be_scheduled"]}
 
 
 
 
 async def resolve_conflicting_events(state: AgentState):
 
-    conflicting_events = state["conflicting_events"]
-    if conflicting_events == "NONE":
-        
-        return {"events_to_be_scheduled" : state["events_to_be_scheduled"], "messages" : ["No resolution required, since no conflicting events found"]}
-    
-    else:
         
         system_message = """
         You are an intelligent assistant for an email agent that resolves conflicts in calendar events.
@@ -629,7 +625,7 @@ async def create_meeting_events(state: AgentState):
         meetings_scheduled.append(event_scheduled)
 
     
-    return {"meetings_scheduled" : meetings_scheduled, "messages" : ["Created meeting events in the calendar and sent notifications to the attendees"]}
+    return {"meetings_scheduled" : meetings_scheduled, "messages" : ["Created meeting events in the calendar and sent notifications to the attendees!"]}
 
 
 async def no_meeting_details(state: AgentState):
