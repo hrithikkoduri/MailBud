@@ -11,6 +11,9 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [streamingComplete, setStreamingComplete] = useState(false);
   const [meetingsData, setMeetingsData] = useState<MeetingsData | null>(null);
+  const [resolutionInput, setResolutionInput] = useState<string>('');
+  const [selectedEvents, setSelectedEvents] = useState<Set<string>>(new Set());
+  const [selectAll, setSelectAll] = useState(false);
 
   const handleStreamMessage = (message: string) => {
     setCurrentMessage(message);
@@ -21,9 +24,9 @@ export default function Home() {
   };
 
   const handleFinalResponse = (data: FinalResponse['data']) => {
-    if (data.conflicting_events === "NONE") {
+    if (data.conflicting_events === "NONE" || !data.conflicting_events) {
       setMeetingsData({
-        newMeetings: data.events_to_be_scheduled?.meetings || [],
+        newMeetings: data.events_to_schedule.meetings,
         conflictingEvents: []
       });
     } else {
@@ -32,6 +35,18 @@ export default function Home() {
         conflictingEvents: data.conflicting_events
       });
     }
+  };
+
+  const handleResolution = async (resolution: string) => {
+    if (!resolution.trim() && selectedEvents.size > 0) {
+      alert('Please enter a resolution suggestion');
+      return;
+    }
+    
+    // TODO: Implement the resolution handling logic for multiple events
+    console.log(`Resolution for selected events:`, Array.from(selectedEvents));
+    console.log(`Resolution text:`, resolution);
+    setResolutionInput(''); // Clear input after submission
   };
 
   const fetchMeetings = async () => {
@@ -132,6 +147,27 @@ export default function Home() {
 
                 {meetingsData && (
                   <div className="space-y-6">
+                    <div className="flex items-center gap-4 px-4">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={selectAll}
+                          onChange={(e) => {
+                            setSelectAll(e.target.checked);
+                            if (e.target.checked) {
+                              setSelectedEvents(new Set(meetingsData.newMeetings.map(m => m.summary)));
+                            } else {
+                              setSelectedEvents(new Set());
+                            }
+                          }}
+                          className="h-5 w-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                        />
+                        <label className="text-sm font-medium text-slate-600">Select All Events</label>
+                      </div>
+                      <span className="text-sm text-slate-500 italic">
+                        (The default resolution setting is to replace all conflicting events if any present)
+                      </span>
+                    </div>
                     {meetingsData.newMeetings.map((meeting, index) => {
                       const relatedConflicts = meetingsData.conflictingEvents?.find(
                         conflict => conflict.new_event.summary.toLowerCase() === meeting.summary.toLowerCase()
@@ -144,7 +180,24 @@ export default function Home() {
                             <div>
                               <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-6">New Meeting</h3>
                               <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 shadow-md border border-white/20">
-                                <h4 className="font-medium text-slate-800 text-xl">{meeting.summary}</h4>
+                                <div className="flex justify-between items-start">
+                                  <h4 className="font-medium text-slate-800 text-xl">{meeting.summary}</h4>
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedEvents.has(meeting.summary)}
+                                    onChange={(e) => {
+                                      const newSelected = new Set(selectedEvents);
+                                      if (e.target.checked) {
+                                        newSelected.add(meeting.summary);
+                                      } else {
+                                        newSelected.delete(meeting.summary);
+                                        setSelectAll(false);
+                                      }
+                                      setSelectedEvents(newSelected);
+                                    }}
+                                    className="h-5 w-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                                  />
+                                </div>
                                 <div className="mt-2 space-y-1 text-sm text-slate-600">
                                   <p className="flex items-center gap-2">📅 {formatDateTime(meeting.start.dateTime)} - {formatDateTime(meeting.end.dateTime)}</p>
                                   <p className="flex items-center gap-2">📍 {meeting.location || 'No location specified'}</p>
@@ -179,9 +232,55 @@ export default function Home() {
                               </div>
                             )}
                           </div>
+                          
+                          {/* Resolution Input Section */}
+                          <div className="mt-8 px-4 py-4">
+                            <div className="flex items-center gap-4 w-full">
+                              {relatedConflicts?.existing_events.length > 0 ? (
+                                <>
+                                  <button
+                                    onClick={() => handleResolution(resolutionInput)}
+                                    className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl hover:from-purple-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 whitespace-nowrap"
+                                  >
+                                    Replace Conflicting Events
+                                  </button>
+                                  <span className="text-slate-400 font-medium">or</span>
+                                </>
+                              ) : null}
+                              <input
+                                type="text"
+                                value={resolutionInput}
+                                onChange={(e) => setResolutionInput(e.target.value)}
+                                placeholder={relatedConflicts?.existing_events.length > 0
+                                  ? "Enter your custom resolution suggestion to resolve meeting conflicts..."
+                                  : "Enter any changes to be made to the event..."}
+                                className="flex-1 px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-slate-600"
+                              />
+                            </div>
+                          </div>
                         </div>
                       );
                     })}
+                  </div>
+                )}
+                {meetingsData && meetingsData.newMeetings.length > 0 && (
+                  <div className="mt-8 flex justify-center">
+                    <button
+                      onClick={() => {
+                        if (selectedEvents.size === 0) {
+                          alert('Please select at least one meeting to schedule');
+                          return;
+                        }
+                        // TODO: Implement scheduling logic
+                        console.log('Scheduling selected events:', Array.from(selectedEvents));
+                      }}
+                      className="px-8 py-4 bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 text-white rounded-xl 
+                        hover:from-blue-600 hover:via-blue-700 hover:to-blue-800 transition-all duration-300 
+                        shadow-lg shadow-blue-500/20 hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-0.5
+                        font-medium text-lg"
+                    >
+                      Schedule Meeting{selectedEvents.size !== 1 ? 's' : ''}
+                    </button>
                   </div>
                 )}
               </div>
