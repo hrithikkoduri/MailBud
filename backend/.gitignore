@@ -12,3 +12,5 @@ token.json
 email_agent.ipynb
 test.ipynb
 __pycache__
+.DS_Store
+architecture_diagram.png

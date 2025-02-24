@@ -1,7 +1,7 @@
 {
     "dockerfile_lines": [],
     "graphs": {
-      "email_agent": "./app/email_agent.py:email_agent"
+      "email_agent": "./app/email_agent.py:builder"
     },
     "env": "./.env",
     "python_version": "3.12",

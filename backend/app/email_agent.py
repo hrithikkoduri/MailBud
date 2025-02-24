@@ -669,7 +669,8 @@ async def get_email_agent():
     return builder.compile(checkpointer=memory, interrupt_before=["resolve_conflicting_events"])
 
 # Export the get_email_agent function
-__all__ = ['get_email_agent']
+email_agent = builder
+__all__ = ['email_agent', 'get_email_agent']
 
 # Remove any direct email_agent instantiation at module level
 
