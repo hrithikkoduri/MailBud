@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { StreamResponse, FinalResponse } from '@/types/api';
-import { MeetingsData } from '@/types/meetings';
+import { MeetingsData, ScheduledMeeting } from '@/types/meetings';
 import { format } from 'date-fns';
 
 export default function Home() {

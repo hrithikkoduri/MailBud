@@ -33,4 +33,14 @@ export interface MeetingsData {
     existing_events: ConflictingEvent[];
     new_event: Meeting;
   }[];
+}
+
+export interface ScheduledMeeting {
+  summary: string;
+  start: string;
+  end: string;
+  location?: string;
+  attendees: string[];
+  event_link: string;
+  meeting_link?: string;
 } 

@@ -60,9 +60,8 @@ export interface MeetingsScheduledResponse {
   };
 }
 
-export type StreamResponse =
-  | ThreadIdResponse
-  | MessageResponse
-  | EventsToScheduleResponse
-  | FinalResponse
-  | MeetingsScheduledResponse; 
+export type StreamResponse = {
+  type: 'thread_id' | 'message' | 'final' | 'events_to_schedule' | 'meetings_scheduled' | 'resolution_output';
+  content?: string;
+  data?: any;
+}; 
