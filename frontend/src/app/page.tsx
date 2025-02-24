@@ -90,7 +90,7 @@ export default function Home() {
       </div>
       
       <div className="relative">
-        <div className="max-w-4xl mx-auto p-8 space-y-8">
+        <div className="w-full px-4 py-8 space-y-8">
           <div className="text-center space-y-4">
             <div className="inline-block">
               <h1 className="text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 animate-gradient">
@@ -103,7 +103,7 @@ export default function Home() {
             </p>
           </div>
           
-          <div className="bg-white/90 backdrop-blur-lg rounded-3xl shadow-xl p-8 space-y-6 border border-white/20">
+          <div className="bg-white/90 backdrop-blur-lg rounded-3xl shadow-xl p-8 space-y-6 border border-white/20 w-[98%] max-w-[1100px] mx-auto">
             {!streamingComplete ? (
               <button
                 onClick={fetchMeetings}
@@ -138,38 +138,40 @@ export default function Home() {
                       );
 
                       return (
-                        <div key={index} className="bg-white/90 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-white/20">
-                          <div className="space-y-4">
+                        <div key={index} className="bg-white/90 backdrop-blur-sm rounded-xl px-3 py-3 shadow-xl border border-white/20">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 px-4 py-4">
+                            {/* New Meeting Column */}
                             <div>
-                              <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">New Meeting</h3>
+                              <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-6">New Meeting</h3>
                               <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 shadow-md border border-white/20">
-                                <h4 className="font-medium text-slate-800">{meeting.summary}</h4>
+                                <h4 className="font-medium text-slate-800 text-xl">{meeting.summary}</h4>
                                 <div className="mt-2 space-y-1 text-sm text-slate-600">
-                                  <p>📅 {formatDateTime(meeting.start.dateTime)} - {formatDateTime(meeting.end.dateTime)}</p>
-                                  <p>📍 {meeting.location || 'No location specified'}</p>
-                                  <p>👥 {meeting.attendees.map(a => a.email).join(', ')}</p>
+                                  <p className="flex items-center gap-2">📅 {formatDateTime(meeting.start.dateTime)} - {formatDateTime(meeting.end.dateTime)}</p>
+                                  <p className="flex items-center gap-2">📍 {meeting.location || 'No location specified'}</p>
+                                  <p className="flex items-center gap-2">👥 {meeting.attendees.map(a => a.email).join(', ')}</p>
                                 </div>
                               </div>
                             </div>
 
+                            {/* Conflicting Events Column */}
                             {relatedConflicts && (
                               <div>
-                                <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">
+                                <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-6">
                                   Conflicting Events ({relatedConflicts.existing_events.length})
                                 </h3>
-                                <div className="space-y-4">
+                                <div className="space-y-6">
                                   {relatedConflicts.existing_events.map((existingEvent, eventIndex) => (
                                     <div 
                                       key={eventIndex} 
                                       className="bg-rose-50/80 backdrop-blur-sm rounded-xl p-4 shadow-md border border-rose-100"
                                     >
-                                      <h4 className="font-medium text-slate-800">
-                                        Existing: {existingEvent.summary}
+                                      <h4 className="font-medium text-slate-800 text-xl">
+                                        {existingEvent.summary}
                                       </h4>
                                       <div className="mt-2 space-y-1 text-sm text-slate-600">
-                                        <p>📅 {formatDateTime(existingEvent.start.dateTime)} - {formatDateTime(existingEvent.end.dateTime)}</p>
-                                        <p>📍 {existingEvent.location || 'No location specified'}</p>
-                                        <p>👥 {existingEvent.attendees.map(a => a.email).join(', ')}</p>
+                                        <p className="flex items-center gap-2">📅 {formatDateTime(existingEvent.start.dateTime)} - {formatDateTime(existingEvent.end.dateTime)}</p>
+                                        <p className="flex items-center gap-2">📍 {existingEvent.location || 'No location specified'}</p>
+                                        <p className="flex items-center gap-2">👥 {existingEvent.attendees.map(a => a.email).join(', ')}</p>
                                       </div>
                                     </div>
                                   ))}
