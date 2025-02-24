@@ -62,46 +62,39 @@ class ServiceAuthenticator:
     def __init__(self, credentials_path='credentials.json', token_path='token.json'):
         self.credentials_path = credentials_path
         self.token_path = token_path
-        self.creds = self.get_credentials()
+        self.creds = None  # Initialize as None, will be set when get_credentials is called
         
     async def get_credentials(self):
         """Gets valid user credentials from storage or initiates OAuth2 flow."""
-        creds = None
-        
-        if os.path.exists(self.token_path):
-            try:
-                creds = Credentials.from_authorized_user_file(self.token_path, SCOPES)
-            except Exception as e:
-                print(f"Error loading existing credentials: {e}")
-                
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                try:
-                    creds.refresh(Request())
-                except Exception as e:
-                    print(f"Error refreshing credentials: {e}")
-                    creds = None
+        if self.creds is None:  # Only get credentials if not already set
+            creds = None
             
-            if not creds:
+            if os.path.exists(self.token_path):
                 try:
-                    flow = InstalledAppFlow.from_client_secrets_file(
-                        self.credentials_path, SCOPES)
-                    creds = await flow.run_local_server_async(
-                        port=0,
-                        success_message='Authentication successful! You can close this window.',
-                        authorization_prompt_message='Please authorize the application.'
-                    )
+                    creds = Credentials.from_authorized_user_file(self.token_path, SCOPES)
                 except Exception as e:
-                    raise Exception(f"Failed to authenticate: {e}")
-                
-                # Save the credentials for the next run
-                try:
-                    with open(self.token_path, 'w') as token:
-                        token.write(creds.to_json())
-                except Exception as e:
-                    print(f"Warning: Could not save credentials: {e}")
+                    print(f"Error loading existing credentials: {e}")
                     
-        return creds
+            if not creds or not creds.valid:
+                if creds and creds.expired and creds.refresh_token:
+                    try:
+                        creds.refresh(Request())
+                    except Exception as e:
+                        print(f"Error refreshing credentials: {e}")
+                        creds = None
+                
+                if not creds:
+                    try:
+                        flow = InstalledAppFlow.from_client_secrets_file(
+                            self.credentials_path, SCOPES)
+                        creds = await flow.run_local_server_async()
+                    except Exception as e:
+                        print(f"Error in OAuth flow: {e}")
+                        raise
+            
+            self.creds = creds
+        
+        return self.creds
 
     async def get_gmail_service(self):
         """Returns an authorized Gmail API service instance."""
