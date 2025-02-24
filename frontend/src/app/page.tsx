@@ -365,10 +365,11 @@ export default function Home() {
                         setDisplayInput(new Map());
                         console.log('Final resolution text:', newResolution);
                       }}
-                      className="px-8 py-4 bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 text-white rounded-xl 
+                      disabled={selectedEvents.size === 0}
+                      className={`px-8 py-4 bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 text-white rounded-xl 
                         hover:from-blue-600 hover:via-blue-700 hover:to-blue-800 transition-all duration-300 
                         shadow-lg shadow-blue-500/20 hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-0.5
-                        font-medium text-lg"
+                        font-medium text-lg ${selectedEvents.size === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       Schedule Meeting{selectedEvents.size !== 1 ? 's' : ''}
                     </button>
